@@ -68,15 +68,14 @@ contract Auction is Ownable{
         newItem.highestBid = 0;
         newItem.highestBidder = address(0);
         newItem.startingPrice = _startingprice;
-        IERC721(newItem.nftAddress).safeTransferFrom(nftOwner, address(this)newItem.nftId);
     }
 
     function placeBid(uint256 _auctionId) public payable {
         AuctionItem storage item = auctionItems[_auctionId];
         require(item.auctionStarted, "auction not started");
         require(
-            msg.value > item.highestBid,
-            "Your bid must be higher than the current highest bid."
+            msg.value > item.highestBid, "amount too small"
+
         );
         require(msg.value > item.startingPrice);
 
