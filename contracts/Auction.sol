@@ -1,62 +1,76 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.7;
-
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 contract Auction {
-    address manager;
-    address[] pastWinners;
-    address[] bidders;
-    mapping(address => uint256) bidAmountsToBidders;
-    uint256 public minPriceToEnter;
+    
+   address public owner;
+    
+    struct Auction {
+        uint128 startBlock;
+        uint128 endBlock;
+        address  auctionCreator;
+        address auctionedItem;
+        address highestBidder;
+        uint highestBid;
+        uint itemID;
+        bool started;
+        
+    }
+uint id;
+mapping(uint => Auction) public auctionID;
+mapping(address =>mapping( uint => uint)) public userBidAMount;
 
+    error invalidBlock();
+    error  notStarted();
     constructor() {
-        manager = msg.sender;
-        minPriceToEnter = 1 ether;
+        owner = msg.sender;
     }
 
-    function enter() public payable {
-        require(
-            msg.value >= minPriceToEnter,
-            "You haven't contributed enough Ether."
-        );
-        bidders.push(msg.sender);
-        bidAmountsToBidders[msg.sender] = msg.value;
+
+    function createAuction(uint128 _startBlock, uint128 _endBlock, address _auctionItem, uint256 _nftID)external{
+        require(_auctionItem != address(0));
+
+        if(_endBlock<= _startBlock) revert invalidBlock();
+        Auction storage auction = auctionID[id];
+        auction.startBlock = _startBlock;
+        auction.endBlock = _endBlock;
+        auction.auctionCreator = msg.sender;
+        auction.auctionedItem = _auctionItem;
+        auction.started = true;
+        auction.itemID = _nftID;
+        IERC721(_auctionItem).transferFrom(msg.sender, address(this), _nftID);
+        id++; 
+
+
     }
-
-    function pickWinner() public managersOnly {
-        require(bidders.length > 0, "No bidders entered.");
-        uint256 highestBid;
-        address currentWinner;
-
-        // Select the highest bidder
-        for(uint i = 0; i < bidders.length; i++) {
-            if(bidAmountsToBidders[bidders[i]] > highestBid) {
-                currentWinner = bidders[i];
-                highestBid = bidAmountsToBidders[currentWinner];
-            }
-        }
-
-        // Return funds to losing bidders and reset current bids
-        for(uint i = 0; i < bidders.length; i++) {
-            if(bidders[i] != currentWinner) {
-                payable(bidders[i]).transfer(bidAmountsToBidders[bidders[i]]);
-            }
-            bidAmountsToBidders[bidders[i]] = 0;
-        }
-
-        // Save current winner
-        pastWinners.push(currentWinner);
-
-        // Reset bidders
-        delete bidders;
+    function bid(uint256 _auctionID) external payable {
+        require(msg.value != 0, "empty value");
+        require(msg.sender != owner, "Ole");
+        
+        Auction storage auction =  auctionID[_auctionID];
+       if(auction.started) revert notStarted();
+       require(msg.sender != auction.auctionCreator);
+       userBidAMount[msg.sender][_auctionID] = msg.value;
+        if(msg.value > auction.highestBid) {
+            auction.highestBid = msg.value;
+            auction.highestBidder = msg.sender;
+       }
+       
+        
     }
+    // function updatebBid() external payable {
+    //     userBid[msg.sender] += msg.value;
+    // }
 
-    function getPastWinners() public view returns (address[] memory) {
-        return pastWinners;
-    }
 
-    modifier managersOnly() {
-        require(msg.sender == manager, "Only managers can perform this action.");
-        _; // this will get replaced by the function which uses this modifier
+
+
+
+
+
+
+
+    function isOwner() internal view {
+        require(msg.sender == owner);
     }
 }
