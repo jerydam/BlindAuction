@@ -11,7 +11,7 @@ contract Auction {
         address  auctionCreator;
         address auctionedItem;
         address highestBidder;
-        uint highestBid;
+        uint highestBid;    
         uint itemID;
         bool started;
         
